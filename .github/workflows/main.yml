@@ -1,4 +1,4 @@
-name: Inspect Gradle Files
+name: Build Android APK
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  inspect:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,24 +20,30 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Extract Android project
+      - name: Find and extract Android project
         run: |
           ZIP=$(find . -maxdepth 2 -name "*.zip" | head -1)
-          mkdir extracted
+          mkdir -p extracted
           unzip -q "$ZIP" -d extracted
 
-      - name: Inspect Gradle files
+      - name: Find Android project
         run: |
-          ROOT=$(dirname "$(find extracted -name settings.gradle.kts -type f | head -1)")
+          ROOT=$(find extracted -name "gradlew" -type f | head -1)
+          ROOT=$(dirname "$ROOT")
+          echo "ROOT=$ROOT" >> "$GITHUB_ENV"
+          echo "Android project found at: $ROOT"
 
-          echo "===== ROOT build.gradle.kts ====="
-          cat "$ROOT/build.gradle.kts"
+      - name: Make gradlew executable
+        run: chmod +x "$ROOT/gradlew"
 
-          echo "===== APP build.gradle.kts ====="
-          cat "$ROOT/app/build.gradle.kts"
+      - name: Build APK
+        run: |
+          cd "$ROOT"
+          ./gradlew assembleDebug --stacktrace
 
-          echo "===== gradle.properties ====="
-          cat "$ROOT/gradle.properties"
-
-          echo "===== GRADLE DIRECTORY ====="
-          find "$ROOT/gradle" -maxdepth 3 -type f -print 2>/dev/null || true
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Android-APK
+          path: |
+            **/build/outputs/apk/**/*.apk
