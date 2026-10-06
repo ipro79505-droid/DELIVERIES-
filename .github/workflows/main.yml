@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Inspect Android Project
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  build:
+  inspect:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,30 +20,25 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-
       - name: Extract Android project
         run: |
           ZIP=$(find . -maxdepth 2 -name "*.zip" | head -1)
+          echo "ZIP FILE: $ZIP"
           mkdir extracted
           unzip -q "$ZIP" -d extracted
 
-      - name: Build APK
+      - name: Inspect project files
         run: |
-          GRADLEW=$(find extracted -name "gradlew" -type f | head -1)
-          if [ -z "$GRADLEW" ]; then
-            echo "gradlew was not found in the uploaded project."
-            exit 1
-          fi
+          echo "===== ALL IMPORTANT FILES ====="
+          find extracted -type f \( \
+            -name "gradlew" -o \
+            -name "build.gradle" -o \
+            -name "build.gradle.kts" -o \
+            -name "settings.gradle" -o \
+            -name "settings.gradle.kts" -o \
+            -name "gradle-wrapper.properties" \
+            -o -name "AndroidManifest.xml" \
+          \) -print
 
-          chmod +x "$GRADLEW"
-          ROOT=$(dirname "$GRADLEW")
-          cd "$ROOT"
-          ./gradlew assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Deliveries-APK
-          path: extracted/**/build/outputs/apk/debug/*.apk
+          echo "===== TOP LEVEL ====="
+          find extracted -maxdepth 3 -type f | head -100
