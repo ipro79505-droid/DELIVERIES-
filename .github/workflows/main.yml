@@ -1,0 +1,49 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Extract Android project
+        run: |
+          ZIP=$(find . -maxdepth 2 -name "*.zip" | head -1)
+          mkdir extracted
+          unzip -q "$ZIP" -d extracted
+
+      - name: Build APK
+        run: |
+          GRADLEW=$(find extracted -name "gradlew" -type f | head -1)
+          if [ -z "$GRADLEW" ]; then
+            echo "gradlew was not found in the uploaded project."
+            exit 1
+          fi
+
+          chmod +x "$GRADLEW"
+          ROOT=$(dirname "$GRADLEW")
+          cd "$ROOT"
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Deliveries-APK
+          path: extracted/**/build/outputs/apk/debug/*.apk
