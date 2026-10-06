@@ -1,4 +1,4 @@
-name: Inspect Android Project
+name: Inspect Gradle Files
 
 on:
   workflow_dispatch:
@@ -23,22 +23,21 @@ jobs:
       - name: Extract Android project
         run: |
           ZIP=$(find . -maxdepth 2 -name "*.zip" | head -1)
-          echo "ZIP FILE: $ZIP"
           mkdir extracted
           unzip -q "$ZIP" -d extracted
 
-      - name: Inspect project files
+      - name: Inspect Gradle files
         run: |
-          echo "===== ALL IMPORTANT FILES ====="
-          find extracted -type f \( \
-            -name "gradlew" -o \
-            -name "build.gradle" -o \
-            -name "build.gradle.kts" -o \
-            -name "settings.gradle" -o \
-            -name "settings.gradle.kts" -o \
-            -name "gradle-wrapper.properties" \
-            -o -name "AndroidManifest.xml" \
-          \) -print
+          ROOT=$(dirname "$(find extracted -name settings.gradle.kts -type f | head -1)")
 
-          echo "===== TOP LEVEL ====="
-          find extracted -maxdepth 3 -type f | head -100
+          echo "===== ROOT build.gradle.kts ====="
+          cat "$ROOT/build.gradle.kts"
+
+          echo "===== APP build.gradle.kts ====="
+          cat "$ROOT/app/build.gradle.kts"
+
+          echo "===== gradle.properties ====="
+          cat "$ROOT/gradle.properties"
+
+          echo "===== GRADLE DIRECTORY ====="
+          find "$ROOT/gradle" -maxdepth 3 -type f -print 2>/dev/null || true
